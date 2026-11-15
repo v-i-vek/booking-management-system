@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #0b1326;
+    color: #dae2fd;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0b1326;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(14, 165, 233, 0.4);
+  }
+  * {
+    box-sizing: border-box;
+  }
+  ::selection {
+    background: rgba(14, 165, 233, 0.3);
+    color: #dae2fd;
+  }
+}
+
+@layer utilities {
+  .font-tabular {
+    font-feature-settings: 'tnum' 1;
+  }
+  .data-mono {
+    font-family: 'Inter', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .text-glow-primary {
+    text-shadow: 0 0 8px rgba(14, 165, 233, 0.5);
+  }
+  .border-glow-primary {
+    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.4), 0 0 12px rgba(14, 165, 233, 0.15);
+  }
+}
