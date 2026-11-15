@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+// In production, uses VITE_API_URL if configured, otherwise falls back to '/api/v1' (works with dev proxy & reverse proxies)
+const baseURL = (import.meta.env.VITE_API_URL as string)?.trim() || '/api/v1'
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
