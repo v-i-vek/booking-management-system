@@ -46,3 +46,6 @@ export interface ToastMessage {
   message: string
   icon?: string
 }
+
+export * from './social'
+

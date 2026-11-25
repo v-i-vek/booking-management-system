@@ -1,128 +1,233 @@
-import React from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import clsx from 'clsx'
+import React, { useState } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { useSocialStore } from '../../store/socialStore'
 import { useAuthStore } from '../../store/authStore'
 
-interface SidebarProps {
-  isOpen: boolean
-  onClose: () => void
-}
-
-interface NavItem {
-  to: string
-  icon: string
-  label: string
-  adminOnly?: boolean
-}
-
-const navItems: NavItem[] = [
-  { to: '/dashboard', icon: 'grid_view', label: 'Dashboard' },
-  { to: '/users', icon: 'manage_accounts', label: 'Users', adminOnly: true },
-  { to: '/profile', icon: 'person', label: 'My Profile' },
-]
-
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, logout } = useAuthStore()
+export const Sidebar: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const {
+    currentUser,
+    conversations,
+    notifications,
+    setCreatePostOpen,
+    isNotificationsOpen,
+    setNotificationsOpen,
+  } = useSocialStore()
+  const { logout } = useAuthStore()
+
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
+
+  const unreadMessagesCount = conversations.reduce(
+    (acc, curr) => acc + (curr.unreadCount || 0),
+    0,
+  )
+  const unreadNotifsCount = notifications.filter((n) => !n.isRead).length
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const filteredNav = navItems.filter(item => !item.adminOnly || user?.role === 'ADMIN')
+  const navItems = [
+    { label: 'Home', icon: 'home', path: '/' },
+    { label: 'Explore', icon: 'explore', path: '/explore' },
+    { label: 'Reels', icon: 'movie', path: '/reels' },
+    {
+      label: 'Messages',
+      icon: 'chat_bubble',
+      path: '/messages',
+      badge: unreadMessagesCount > 0 ? unreadMessagesCount : null,
+    },
+  ]
 
   return (
-    <>
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={clsx(
-          'fixed top-0 left-0 z-30 h-full w-64 flex flex-col',
-          'border-r border-borderMd',
-          'transition-transform duration-300 ease-in-out',
-          isOpen ? 'translate-x-0' : '-translate-x-full',
-          'lg:translate-x-0 lg:static lg:z-auto',
-        )}
-        style={{ backgroundColor: '#131b2e' }}
-      >
+    <aside className="hidden md:flex fixed left-0 top-0 h-full w-[72px] lg:w-[240px] bg-surface-container-lowest z-50 flex-col justify-between px-2 lg:px-space-md py-space-lg border-r border-outline-variant transition-all">
+      <div className="flex flex-col gap-space-lg">
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-borderMd">
-          <div className="w-9 h-9 rounded-lg bg-surface-high flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              calendar_month
-            </span>
+        <NavLink
+          to="/"
+          className="flex items-center gap-space-sm px-2 lg:px-space-xs py-space-xs group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#833AB4] via-[#FD1D1D] to-[#FCB045] flex items-center justify-center p-[2px] shadow-sm">
+            <div className="w-full h-full bg-surface-container-lowest rounded-[10px] flex items-center justify-center">
+              <span className="material-symbols-outlined text-[20px] text-primary-container">
+                camera
+              </span>
+            </div>
           </div>
-          <div>
-            <p className="font-heading text-sm font-semibold text-onSurface leading-tight">Booking MgmT</p>
-            <p className="text-[10px] text-textTertiary uppercase tracking-wider">Management System</p>
-          </div>
-        </div>
+          <span className="hidden lg:inline font-headline-md text-headline-md tracking-tight text-on-surface font-extrabold bg-gradient-to-r from-on-surface to-on-surface-variant bg-clip-text">
+            Lumigram
+          </span>
+        </NavLink>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-3 overflow-y-auto">
-          <p className="text-[10px] text-textTertiary uppercase tracking-widest font-semibold px-3 mb-2">Main Menu</p>
-          <ul className="space-y-1">
-            {filteredNav.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    clsx(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group',
-                      isActive
-                        ? 'bg-primary/10 text-primary border-l-2 border-primary pl-[10px]'
-                        : 'text-textSecondary hover:text-onSurface hover:bg-surface-high',
-                    )
-                  }
-                >
-                  <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                  <span className="text-sm font-medium">{item.label}</span>
-                  {item.adminOnly && (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded">
-                      ADMIN
+        {/* Primary Navigation */}
+        <nav className="flex flex-col gap-1.5">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <NavLink
+                key={item.label}
+                to={item.path}
+                className={`relative flex items-center gap-space-md px-3 py-3 rounded-DEFAULT transition-all ${
+                  isActive
+                    ? 'bg-surface-container-high text-on-surface font-headline-sm shadow-sm'
+                    : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                }`}
+                title={item.label}
+              >
+                <div className="relative flex items-center justify-center">
+                  <span
+                    className={`material-symbols-outlined text-[24px] ${
+                      isActive ? 'fill-1 text-on-surface' : ''
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  {item.badge && (
+                    <span className="absolute -top-1.5 -right-2 px-1.5 py-0.5 min-w-[18px] text-[10px] font-bold text-white bg-[#FD1D1D] rounded-full flex items-center justify-center ring-2 ring-surface-container-lowest">
+                      {item.badge}
                     </span>
                   )}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
+                </div>
+                <span className="hidden lg:inline text-body-lg font-medium">
+                  {item.label}
+                </span>
+              </NavLink>
+            )
+          })}
 
-        {/* User Info + Logout */}
-        <div className="border-t border-borderMd p-3">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg bg-surface-high">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-primary text-[16px]">person</span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-onSurface truncate">{user?.name}</p>
-              <p className="text-[10px] text-textTertiary truncate">{user?.email}</p>
-            </div>
-            <span className={clsx(
-              'ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0',
-              user?.role === 'ADMIN' ? 'text-primary bg-primary/10' : 'text-textSecondary bg-surface-highest'
-            )}>
-              {user?.role}
-            </span>
-          </div>
+          {/* Notifications Button */}
           <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-danger hover:bg-danger/10 transition-all duration-150 group"
+            type="button"
+            onClick={() => setNotificationsOpen(!isNotificationsOpen)}
+            className={`relative flex items-center gap-space-md px-3 py-3 rounded-DEFAULT transition-all text-left ${
+              isNotificationsOpen
+                ? 'bg-surface-container-high text-on-surface font-headline-sm'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
+            title="Notifications"
           >
-            <span className="material-symbols-outlined text-[20px]">logout</span>
-            <span className="text-sm font-medium">Sign Out</span>
+            <div className="relative flex items-center justify-center">
+              <span
+                className={`material-symbols-outlined text-[24px] ${
+                  isNotificationsOpen ? 'fill-1 text-on-surface' : ''
+                }`}
+              >
+                favorite
+              </span>
+              {unreadNotifsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FD1D1D] rounded-full ring-2 ring-surface-container-lowest" />
+              )}
+            </div>
+            <span className="hidden lg:inline text-body-lg font-medium">
+              Notifications
+            </span>
           </button>
+
+          {/* Create Post Button */}
+          <button
+            type="button"
+            onClick={() => setCreatePostOpen(true)}
+            className="flex items-center gap-space-md px-3 py-3 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all text-left group"
+            title="Create Post"
+          >
+            <div className="w-6 h-6 rounded-md border-2 border-current flex items-center justify-center group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined text-[18px]">add</span>
+            </div>
+            <span className="hidden lg:inline text-body-lg font-medium">Create</span>
+          </button>
+
+          {/* Profile Link */}
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-space-md px-3 py-3 rounded-DEFAULT transition-all ${
+                isActive
+                  ? 'bg-surface-container-high text-on-surface font-headline-sm'
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`
+            }
+            title="Profile"
+          >
+            <img
+              src={currentUser.avatar}
+              alt={currentUser.name}
+              className={`w-6 h-6 rounded-full object-cover ring-2 ${
+                location.pathname === '/profile'
+                  ? 'ring-on-surface'
+                  : 'ring-outline-variant'
+              }`}
+            />
+            <span className="hidden lg:inline text-body-lg font-medium">
+              Profile
+            </span>
+          </NavLink>
+        </nav>
+      </div>
+
+      {/* Bottom Actions */}
+      <div className="relative flex flex-col gap-1">
+        {/* Threads link */}
+        <a
+          href="https://threads.net"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-space-md px-3 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all"
+          title="Threads"
+        >
+          <span className="material-symbols-outlined text-[24px]">alternate_email</span>
+          <span className="hidden lg:inline text-body-lg font-medium">Threads</span>
+        </a>
+
+        {/* More Menu Toggle */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+            className={`w-full flex items-center gap-space-md px-3 py-2.5 rounded-DEFAULT transition-all ${
+              isMoreMenuOpen
+                ? 'bg-surface-container-high text-on-surface'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
+            title="More Options"
+          >
+            <span className="material-symbols-outlined text-[24px]">menu</span>
+            <span className="hidden lg:inline text-body-lg font-medium">More</span>
+          </button>
+
+          {/* Popover Menu */}
+          {isMoreMenuOpen && (
+            <div className="absolute bottom-full left-0 mb-2 w-60 bg-surface-container-high border border-outline-variant rounded-xl shadow-2xl p-2 z-50 flex flex-col gap-1 backdrop-blur-xl">
+              <NavLink
+                to="/profile"
+                onClick={() => setIsMoreMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">person</span>
+                <span>Your Profile</span>
+              </NavLink>
+              <NavLink
+                to="/profile?tab=saved"
+                onClick={() => setIsMoreMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">bookmark</span>
+                <span>Saved Posts</span>
+              </NavLink>
+              <div className="h-[1px] bg-outline-variant my-1" />
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-body-md text-error hover:bg-error/10 transition-colors text-left"
+              >
+                <span className="material-symbols-outlined text-[20px]">logout</span>
+                <span>Log Out</span>
+              </button>
+            </div>
+          )}
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   )
 }

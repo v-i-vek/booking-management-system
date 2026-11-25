@@ -1,152 +1,133 @@
-# 🤖 AGENT.md — Booking Management System
+# 🤖 AGENT.md — Lumigram Social App
 
 > **Repository Master Guide for AI Agents & Developers**  
-> This file provides high-density context, architectural invariants, code conventions, and execution workflows for AI coding assistants working in this workspace.
+> This file provides high-density context, architectural invariants, design system guidelines, code conventions, and execution workflows for AI coding assistants working in this workspace.
 
 ---
 
 ## 📌 1. Repository Overview
 
-This project is a full-stack **Booking Management System** structured as a lightweight monorepo containing two decoupled packages:
-- **`backend/`**: A NestJS 10 REST API using Prisma 5, PostgreSQL (hosted on Neon), JWT authentication with RBAC, and Swagger documentation.
-- **`frontend/`**: A React 18 Single Page Application built with Vite 5, TypeScript, Tailwind CSS 3, Zustand, React Router 6, and React Hook Form + Zod.
+This project is **Lumigram**, an editorial, high-performance social media web application (Instagram / Threads clone) built on the **"Midnight Editorial"** design system.
+
+The repository is structured as a decoupled monorepo:
+- **`frontend/`**: React 18 SPA with Vite 5, TypeScript, Tailwind CSS 3, Zustand, and React Router 6. Features Home Feed with Stories, Explore & Discovery Grid, Reels Vertical Player, Direct Messaging, Creator Profile, Post Creation Studio, and Notifications.
+- **`backend/`**: NestJS 10 REST API with Prisma 5, PostgreSQL (hosted on Neon), JWT authentication with RBAC, and Swagger documentation.
 
 ```
 booking-management/
 ├── backend/                  # NestJS API application
 │   ├── prisma/               # Schema, migrations & seed script
-│   ├── src/                  # NestJS source code (modules, controllers, services)
+│   ├── src/                  # NestJS modules, controllers, services, guards
 │   ├── .env.example          # Backend environment template
 │   ├── package.json          # Backend dependencies and scripts
 │   └── tsconfig.json         # Backend TypeScript config
-├── frontend/                 # React + Vite application
-│   ├── src/                  # React source code (pages, components, store, api)
+├── frontend/                 # React + Vite Social Media application
+│   ├── src/
+│   │   ├── api/              # Axios instance & endpoints
+│   │   ├── components/       # Layout, Navigation, UI components, Modals
+│   │   ├── pages/            # FeedPage, ExplorePage, ReelsPage, MessagesPage, ProfilePage
+│   │   ├── router/           # Route guards (ProtectedRoute, AdminRoute)
+│   │   ├── store/            # socialStore (Zustand) & authStore (Zustand)
+│   │   ├── types/            # TypeScript interfaces & social data models
+│   │   ├── App.tsx           # Route declarations
+│   │   └── main.tsx          # React DOM entry point
 │   ├── .env.example          # Frontend environment template
 │   ├── vite.config.ts        # Vite config with dynamic proxy
+│   ├── tailwind.config.js    # Midnight Editorial design tokens
 │   ├── package.json          # Frontend dependencies and scripts
 │   └── tsconfig.json         # Frontend TypeScript config
-├── .gitignore                # Root gitignore (ignores node_modules, dist, .env*)
+├── .gitignore                # Root gitignore
 └── AGENT.md                  # This file
 ```
 
 ---
 
-## ⚡ 2. Quickstart & Command Workflows
+## 🎨 2. Design System: "Midnight Editorial"
 
-> **CRITICAL**: Always `cd` into either `backend/` or `frontend/` before executing package-specific commands.
+Lumigram embodies an ultra-refined, high-focus social media experience built for high-signal curation and visual storytelling, pairing deep nocturnal pitch with vibrant sunset gradient accents:
 
-### Backend Commands (`cd backend`)
-| Action | Command | Notes |
+- **Canvas & Surfaces**:
+  - `surface` / `background`: `#131313`
+  - `surface-container-lowest`: `#0e0e0e`
+  - `surface-container-low`: `#1c1b1b`
+  - `surface-container`: `#201f1f`
+  - `surface-container-high`: `#2a2a2a`
+  - `surface-container-highest`: `#353534`
+- **Brand Gradient Spectrum**:
+  - `linear-gradient(45deg, #833AB4, #FD1D1D, #FCB045)` (used for unread story rings, active status indicators, and creative accents).
+- **Primary Action Accent**:
+  - `#0095F6` (links, follow buttons, verification badges).
+- **Typography**:
+  - Primary font: **Plus Jakarta Sans** (weights 400 to 800) for geometric rigor, tight headlines, and compact reading.
+- **Icons**:
+  - **Material Symbols Outlined** (`<span class="material-symbols-outlined">...</span>`).
+
+---
+
+## 📱 3. Frontend Pages & Features
+
+| Route | Page Component | Key Features |
 | :--- | :--- | :--- |
-| **Install** | `npm install` | Installs backend dependencies |
-| **Start (Dev)** | `npm run start:dev` | Starts NestJS with hot reload (`http://localhost:3000`) |
-| **Build** | `npm run build` | Compiles TypeScript into `dist/` |
-| **Start (Prod)**| `npm run start:prod` | Runs compiled `dist/main.js` |
-| **Prisma Generate** | `npx prisma generate` | Regenerates `@prisma/client` (run after schema edits) |
-| **Prisma DB Push** | `npx prisma db push` | Pushes schema directly to database |
-| **Prisma Migrate** | `npx prisma migrate dev` | Creates and applies database migrations |
-| **Prisma Studio** | `npx prisma studio` | Interactive web UI for database inspection |
-| **Seed Database** | `npm run seed` | Seeds default Admin (`admin@booking.com` / `Admin@123`) & User |
-
-### Frontend Commands (`cd frontend`)
-| Action | Command | Notes |
-| :--- | :--- | :--- |
-| **Install** | `npm install` | Installs frontend dependencies |
-| **Start (Dev)** | `npm run dev` | Starts Vite dev server (`http://localhost:5173`) |
-| **Build** | `npm run build` | Runs `tsc && vite build` into `dist/` |
-| **Preview** | `npm run preview` | Previews production build locally |
+| `/`, `/feed` | `FeedPage` | Stories carousel with gradient rings, 630px central feed, double-tap to like, comments preview, inline comment input, right-rail user card & suggestions |
+| `/explore` | `ExplorePage` | Sticky search input, category filter chips (`Architecture`, `Editorial`, `Film & 35mm`), 3-column discovery masonry grid with 2x2 featured reels, hover overlays |
+| `/reels` | `ReelsPage` | Fullscreen 9:16 vertical video player with dynamic blurred ambient aura, creator overlay, follow button, action rail (likes, comments, share, save), vinyl audio disc, slide-over comments drawer |
+| `/messages` | `MessagesPage` | Instagram Direct: Left pane with Notes thought bubbles, conversation threads, unread counters; Right pane with real-time chat messages, voice/call controls, message input |
+| `/profile` | `ProfilePage` | Creator profile header, avatar story ring, post/follower/following metrics, bio, story highlights tray, tab switcher (`POSTS`, `REELS`, `SAVED`, `TAGGED`), interactive Edit Profile modal |
+| Global Modal | `CreatePostModal` | Accessible from sidebar/bottom bar "+ Create": image upload/presets, aspect ratios (1:1, 4:5, 16:9), live CSS photo filters (Clarendon, Moon, etc.), caption textarea, location tag, and instant feed publishing |
+| Global Drawer| `NotificationsDrawer`| Flyout drawer displaying likes, comments, and new followers with mark-as-read |
 
 ---
 
-## 📐 3. Architecture & Core Invariants
+## ⚡ 4. State Management (`socialStore.ts`)
 
-### 3.1 Backend Architecture (`backend/`)
-- **Global API Prefix**: All REST endpoints are prefixed with `api/v1` (configured in `backend/src/main.ts`).
-- **Swagger Documentation**: Live OpenAPI Swagger docs are mounted at `/api/docs`.
-- **CORS Policy**: Configured to allow cross-origin requests (`origin: '*'`, credentials, standard headers).
-- **Global Validation Pipe**: `ValidationPipe` is enabled with `whitelist: true`, `forbidNonWhitelisted: true`, and `transform: true`.
-- **Database Layer**:
-  - Datasource provider: `postgresql` (Neon / AWS RDS).
-  - Client: `PrismaService` extending `PrismaClient` implements `OnModuleInit` and `OnModuleDestroy` lifecycle hooks.
-- **Security & RBAC**:
-  - Passwords hashed with `bcrypt` (10 salt rounds).
-  - Stateless authentication via `PassportJwt` (`JwtStrategy`).
-  - Route authorization via `@UseGuards(JwtAuthGuard, RolesGuard)` and custom `@Roles(Role.ADMIN)`.
-  - Current user injection via `@CurrentUser()` decorator.
-
-### 3.2 Frontend Architecture (`frontend/`)
-- **Base Route Pattern**:
-  - Public routes: `/login`, `/register`.
-  - Protected routes (wrapped with `ProtectedRoute` + `AppLayout`): `/dashboard`, `/profile`.
-  - Admin-only routes (wrapped with `AdminRoute`): `/users`.
-  - Fallback: Wildcard `*` routes to `NotFoundPage`.
-- **HTTP & API Layer**:
-  - Single Axios instance in `frontend/src/api/axios.ts`.
-  - Development: Uses Vite dev server proxy forwarding `/api` to `http://localhost:3000`.
-  - Production: Dynamic resolution via `import.meta.env.VITE_API_URL` or fallback to `/api/v1`.
-  - Interceptors: Automatically injects `Authorization: Bearer <token>` from `localStorage` (`bms_token`), and redirects to `/login` on `401`.
-- **Global State**:
-  - Managed by `zustand` in `frontend/src/store/authStore.ts`.
-  - Stores `user`, `token`, `isAuthenticated`, and provides `login()`, `logout()`, `hydrate()`, and `updateUser()`.
-- **Design System**:
-  - Dark transit/operations theme (nocturnal blues `#0b1326`, electric cyan accents `#0ea5e9`, and emerald signals `#10b981`).
-  - Modular UI components located in `frontend/src/components/ui/` (`Button`, `Input`, `Badge`, `Modal`, `Toast`, `LoadingSpinner`).
+Global social media state is managed by `useSocialStore` in `frontend/src/store/socialStore.ts`:
+- **State**:
+  - `currentUser`: Current logged-in user profile
+  - `posts`: Array of timeline posts with nested comments and like/save states
+  - `stories`: Array of active stories
+  - `reels`: Array of short vertical video reels
+  - `conversations`: Array of direct message threads with full message history
+  - `notes`: Array of user thought bubbles
+  - `notifications`: Activity alerts
+  - `activeExploreTag`, `searchQuery`
+  - `isCreatePostOpen`, `isNotificationsOpen`
+- **Actions**:
+  - `toggleLikePost(postId)`, `toggleSavePost(postId)`, `addCommentToPost(postId, text)`
+  - `toggleLikeReel(reelId)`, `toggleSaveReel(reelId)`, `addCommentToReel(reelId, text)`
+  - `createPost(postData)`: Adds a new post immediately to the feed and user profile
+  - `sendMessage(conversationId, text)`: Appends message to chat thread
+  - `toggleFollowUser(username)`: Updates follow state across reels and suggestions
 
 ---
 
-## 🔌 4. API Endpoints Contract
+## 🛠️ 5. Commands & Workflows
 
-All endpoints require `Content-Type: application/json`.
+### Frontend (`cd frontend`)
+| Command | Action |
+| :--- | :--- |
+| `npm install` | Install frontend packages |
+| `npm run dev` | Start local Vite development server (`http://localhost:5173`) |
+| `npm run build` | Compile TypeScript (`tsc`) and bundle for production (`vite build`) |
+| `npm run preview` | Preview production build locally |
 
-### Authentication (`/api/v1/auth`)
-| Method | Path | Auth Required | Roles | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/register` | No | Anyone | Registers a new user account |
-| `POST` | `/api/v1/auth/login` | No | Anyone | Authenticates credentials, returns `{ token, user }` |
-| `GET` | `/api/v1/auth/me` | Yes (`Bearer`) | Any | Returns profile of the authenticated user |
-
-### Users Management (`/api/v1/users`)
-| Method | Path | Auth Required | Roles | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/users` | Yes (`Bearer`) | `ADMIN` | Returns list of all registered users |
-| `GET` | `/api/v1/users/:id` | Yes (`Bearer`) | `ADMIN` or Self | Fetches single user by UUID |
-| `PATCH` | `/api/v1/users/:id` | Yes (`Bearer`) | `ADMIN` or Self | Updates user details (self cannot alter role/status) |
-| `DELETE`| `/api/v1/users/:id` | Yes (`Bearer`) | `ADMIN` | Deletes a user by UUID |
-
----
-
-## 🗄️ 5. Database Schema Reference
-
-Defined in `backend/prisma/schema.prisma`:
-
-```prisma
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("USER")  // "USER" | "ADMIN"
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-```
+### Backend (`cd backend`)
+| Command | Action |
+| :--- | :--- |
+| `npm install` | Install backend packages |
+| `npm run start:dev` | Start NestJS development server (`http://localhost:3000`) |
+| `npm run build` | Compile TypeScript with Nest CLI |
+| `npx prisma generate` | Regenerate Prisma Client |
+| `npx prisma db push` | Push schema changes to PostgreSQL |
 
 ---
 
-## ⚠️ 6. Common Pitfalls & Agent Invariants
+## ⚠️ 6. Key Agent Invariants
 
-1. **Prisma Client Staleness**:
-   - Whenever `schema.prisma` is modified, you **must** run `npx prisma generate` in `backend/`. Otherwise, `@prisma/client` will fail to recognize schema changes or protocol shifts.
-2. **Environment Variable Separation**:
-   - Backend uses `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `PORT`.
-   - Frontend uses Vite-prefixed variables: `VITE_BACKEND_URL` (for dev proxy) and `VITE_API_URL` (for production API domain).
-   - Never commit `.env` or `.env.local` files.
-3. **Path Aliasing**:
-   - Backend: `@/*` resolves to `backend/src/*`.
-   - Frontend: `@/*` resolves to `frontend/src/*`.
-4. **Vite Dev Proxy vs Production**:
-   - In development, frontend sends requests to `/api/v1/...` and Vite's dev proxy forwards them to `http://localhost:3000`.
-   - In production on Render/Vercel, `VITE_API_URL` points directly to the hosted backend (e.g. `https://api.yourdomain.com/api/v1`).
-5. **Render SPA Routing**:
-   - On Render Static Sites, always maintain the rewrite rule: `/*` -> `/index.html`. Without this rule, browser reloads on non-root paths will trigger 404s.
+1. **Working Directory**: Always `cd` into `frontend/` or `backend/` before executing commands.
+2. **Path Aliasing**:
+   - `frontend/src/*` is aliased as `@/*`.
+   - `backend/src/*` is aliased as `@/*`.
+3. **SPA Routing on Render**:
+   - Maintain the rewrite rule `/*` -> `/index.html` on Render Static Site to prevent 404s on browser reload.
+4. **Design Cohesion**:
+   - Always preserve the dark `#131313` canvas, Plus Jakarta Sans typography, and Material Symbols Outlined icons when adding new social features.

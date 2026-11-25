@@ -1,18 +1,17 @@
-# Agent Guidelines — Booking Management System
+# Agent Guidelines — Lumigram Social App
 
-You are working in a full-stack monorepo:
+You are working in a full-stack social media monorepo:
+- `frontend/`: React 18 + Vite 5 + TypeScript + Tailwind CSS 3 (Midnight Editorial) + Zustand + Axios.
 - `backend/`: NestJS 10 REST API + Prisma 5 + PostgreSQL (Neon) + JWT Auth + Swagger.
-- `frontend/`: React 18 + Vite 5 + TypeScript + Tailwind CSS 3 + Zustand + Axios + React Hook Form + Zod.
 
 ## Primary Documentation
 - Master Guide: `AGENT.md`
-- Backend Guide: `backend/AGENT.md`
 - Frontend Guide: `frontend/AGENT.md`
+- Backend Guide: `backend/AGENT.md`
 
 ## Key Execution Invariants
-1. Working directory separation: Always execute commands inside `backend/` or `frontend/`, never directly from root unless managing git.
-2. Prisma ORM: If you modify `backend/prisma/schema.prisma`, you MUST run `npx prisma generate` and `npx prisma db push` inside `backend/`.
-3. API Prefix: All backend routes are under `/api/v1/`.
-4. Dev Proxy: Frontend dev server proxies `/api` to `http://localhost:3000`. In production, it uses `VITE_API_URL`.
-5. Authentication: Bearer JWT token in Authorization header. Role-based access control with `ADMIN` and `USER` roles.
-6. Design Theme: Dark transit/operations portal palette (`#0b1326`, `#0ea5e9`, `#10b981`).
+1. Working directory separation: Always execute commands inside `frontend/` or `backend/`.
+2. App Name & Identity: Lumigram (Instagram/Threads clone with Midnight Editorial dark aesthetic).
+3. Primary Colors: Surface `#131313`, Container `#201f1f`, Gradient `#833AB4` -> `#FD1D1D` -> `#FCB045`, Accent `#0095F6`.
+4. Typography & Icons: Plus Jakarta Sans + Material Symbols Outlined (`<span class="material-symbols-outlined">...</span>`).
+5. State Stores: `useSocialStore` (posts, reels, stories, direct messages, notes) and `useAuthStore` (token & session).

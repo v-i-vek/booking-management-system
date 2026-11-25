@@ -1,62 +1,117 @@
-import React, { useState, useEffect } from 'react'
-import { useAuthStore } from '../../store/authStore'
+import React from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useSocialStore } from '../../store/socialStore'
 
 interface HeaderProps {
-  onMenuToggle: () => void
   title?: string
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuToggle, title = 'Dashboard' }) => {
-  const { user } = useAuthStore()
-  const [now, setNow] = useState(new Date())
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
-  const dateStr = now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+export const Header: React.FC<HeaderProps> = ({ title = 'Lumigram' }) => {
+  const navigate = useNavigate()
+  const { currentUser, setCreatePostOpen, setNotificationsOpen, notifications } =
+    useSocialStore()
+  const unreadNotifs = notifications.filter((n) => !n.isRead).length
 
   return (
-    <header
-      className="sticky top-0 z-10 w-full h-14 flex items-center justify-between px-4 md:px-6 border-b border-borderMd backdrop-blur-xl"
-      style={{ backgroundColor: 'rgba(13, 19, 38, 0.9)' }}
-    >
-      {/* Left: hamburger + title */}
+    <header className="fixed top-0 left-0 md:left-[72px] lg:left-[240px] right-0 h-16 bg-surface/85 backdrop-blur-xl border-b border-outline-variant z-40 flex items-center justify-between px-4 lg:px-space-xl transition-all">
+      {/* Mobile brand & page title */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={onMenuToggle}
-          className="lg:hidden p-2 rounded-lg text-textSecondary hover:text-onSurface hover:bg-surface-high transition-colors"
-        >
-          <span className="material-symbols-outlined text-[22px]">menu</span>
-        </button>
-        <h1 className="font-heading text-base font-semibold text-onSurface">{title}</h1>
+        <NavLink to="/" className="md:hidden flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#833AB4] via-[#FD1D1D] to-[#FCB045] flex items-center justify-center p-[1.5px]">
+            <div className="w-full h-full bg-surface-container-lowest rounded-[6px] flex items-center justify-center">
+              <span className="material-symbols-outlined text-[16px] text-primary-container">
+                camera
+              </span>
+            </div>
+          </div>
+          <span className="font-headline-sm text-headline-sm text-on-surface font-extrabold tracking-tight">
+            Lumigram
+          </span>
+        </NavLink>
+
+        <span className="hidden md:inline font-headline-sm text-headline-sm text-on-surface tracking-tight font-semibold">
+          {title}
+        </span>
       </div>
 
-      {/* Right: live clock + user chip */}
-      <div className="flex items-center gap-3">
-        {/* Live clock (desktop) */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-high border border-borderMd">
-          <span className="material-symbols-outlined text-primary text-[14px]">schedule</span>
-          <span className="data-mono text-xs text-textSecondary">{timeStr}</span>
-          <span className="text-textTertiary text-xs">|</span>
-          <span className="text-xs text-textTertiary">{dateStr}</span>
+      {/* Center / Right navigation shortcuts */}
+      <div className="flex items-center gap-3 sm:gap-space-md">
+        <nav className="hidden sm:flex items-center gap-space-lg text-body-md font-medium">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              isActive
+                ? 'text-on-surface font-semibold border-b-2 border-primary-container pb-1'
+                : 'text-on-surface-variant hover:text-on-surface transition-colors pb-1'
+            }
+          >
+            Feed
+          </NavLink>
+          <NavLink
+            to="/explore"
+            className={({ isActive }) =>
+              isActive
+                ? 'text-on-surface font-semibold border-b-2 border-primary-container pb-1'
+                : 'text-on-surface-variant hover:text-on-surface transition-colors pb-1'
+            }
+          >
+            Trending
+          </NavLink>
+          <NavLink
+            to="/messages"
+            className={({ isActive }) =>
+              isActive
+                ? 'text-on-surface font-semibold border-b-2 border-primary-container pb-1'
+                : 'text-on-surface-variant hover:text-on-surface transition-colors pb-1'
+            }
+          >
+            Direct
+          </NavLink>
+        </nav>
+
+        {/* Action icons on mobile */}
+        <div className="flex items-center gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => setCreatePostOpen(true)}
+            className="p-1.5 text-on-surface-variant hover:text-on-surface"
+            aria-label="Create post"
+          >
+            <span className="material-symbols-outlined text-[24px]">add_box</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setNotificationsOpen(true)}
+            className="relative p-1.5 text-on-surface-variant hover:text-on-surface"
+            aria-label="Notifications"
+          >
+            <span className="material-symbols-outlined text-[24px]">favorite</span>
+            {unreadNotifs > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-[#FD1D1D] rounded-full" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/messages')}
+            className="p-1.5 text-on-surface-variant hover:text-on-surface"
+            aria-label="Messages"
+          >
+            <span className="material-symbols-outlined text-[24px]">send</span>
+          </button>
         </div>
 
-        {/* System status */}
-        <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded bg-tertiary/10 border border-tertiary/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-          <span className="text-[10px] font-semibold text-tertiary uppercase tracking-wider">System Online</span>
-        </div>
+        <div className="hidden sm:block h-5 w-[1px] bg-outline-variant mx-1" />
 
-        {/* User avatar */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-high border border-borderMd">
-          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-[13px]">person</span>
-          </div>
-          <span className="text-xs font-medium text-onSurface hidden sm:inline">{user?.name?.split(' ')[0]}</span>
-        </div>
+        <NavLink
+          to="/profile"
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+        >
+          <img
+            src={currentUser.avatar}
+            alt={currentUser.name}
+            className="w-8 h-8 rounded-full object-cover ring-2 ring-outline-variant hover:ring-primary-container transition-all"
+          />
+        </NavLink>
       </div>
     </header>
   )

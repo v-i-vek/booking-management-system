@@ -1,191 +1,508 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useSocialStore } from '../store/socialStore'
 import { useAuthStore } from '../store/authStore'
-import { usersApi } from '../api/users'
-import { useToast } from '../hooks/useToast'
-import { ToastContainer } from '../components/ui/Toast'
-import { Button } from '../components/ui/Button'
-import { Badge } from '../components/ui/Badge'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 
-const schema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Enter a valid email'),
-  currentPassword: z.string().optional(),
-  newPassword: z.string().optional(),
-}).refine((d) => {
-  if (d.newPassword && d.newPassword.length > 0) {
-    return d.newPassword.length >= 6
-  }
-  return true
-}, { message: 'New password must be at least 6 characters', path: ['newPassword'] })
-
-type FormValues = z.infer<typeof schema>
+const HIGHLIGHTS = [
+  {
+    name: "Tokyo '24",
+    cover: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCTO3sp-p-885cXEbE9g9fdA6A_c-xsKrQVGkhM6weqao3LjtDVAx5u6QkpeaivjWGp-DW8I53eL-pWb9kz1ssvOhBGcEIN3ojHuNwG0johJ97k6UVd4wliM5AG-qHZYDepmG44htyU4Mwx0E8ulqVSl4DWJRm2Dr-26a1SFyGcN1pie3NrkActKt9afD12UjnglGuPf8bXcrhbnYGCo78HLT4sVe-kR1OoEuNmABY',
+  },
+  {
+    name: 'Architecture',
+    cover: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPbYdju1lJXkJ5WeFD9xjY4-L4LiwrNeCRCb1QawdWFweDC6QSt1w74Q61DwoRezeBwbWBrWyInLDPKBzwsmZlc0FOD69yD3vja-hTAbDevjD-aGLd-B9tRAuzGbTDIlhWNBtKfibKIt7_Ilo6_HRqxwh4BLwDDWalUOp9WyoiyXf0Fp3EsJbM1taBOhcg_8W3R5DRrkQ-dl2Kfwkd69qO25owAMKfFlNp2v_8wo4',
+  },
+  {
+    name: 'Monolith',
+    cover: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDXYZzdGO7iclg4_wwiq4VNa9CIeVeZdbydG5FInSGLCHUfjgwcF2YDfd8zXxnc_HGNg6AP5wJvSXagFs3Vi-Zz25R3UdYq5dOwyAXdAHQVt8faZeXRctEtcJSoTHc2z3DIjde2FjtcKdYOuu5FEhHmFHgWyCWDAb9j1ImvgS-ItmgZ1Yy2UUGkpb2YDpSOoWzKs5QyUaZ5D8fV63X9RKLq7cHYvhq3tjgwE6BTVvA',
+  },
+  {
+    name: '35mm',
+    cover: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCsay4t-LbMzdbGsYWl_6YWo6Du7WrZivK5kXn9GROJ872IcTZQvHY03RZkkS9H_Nc9kvwjPHH02BWVBpTSdNo0KzCkZR1xvTk5GJtppYSig4n9n_LM3LfLm-Zn0FLeLj3zRuI52u4HhAXj983hBQk3g0Qhqe8U5PPsprlahRSO3RGP8dARX44TUVsO8WIEY3Bp57msnYr3TIsH8HHppRVNLb9uB59-a2NDo1ilm9U',
+  },
+]
 
 export const ProfilePage: React.FC = () => {
-  const { user, updateUser } = useAuthStore()
-  const { toasts, toast, removeToast } = useToast()
-  const [isSaving, setIsSaving] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
+  const navigate = useNavigate()
+  const { currentUser, posts, reels } = useSocialStore()
+  const { logout } = useAuthStore()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: user?.name || '', email: user?.email || '' },
-  })
+  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved' | 'tagged'>('posts')
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false)
 
-  const onSubmit = async (data: FormValues) => {
-    if (!user) return
-    setIsSaving(true)
-    try {
-      const dto: { name?: string; email?: string; password?: string } = {
-        name: data.name,
-        email: data.email,
-      }
-      if (data.newPassword && data.newPassword.length > 0) {
-        dto.password = data.newPassword
-      }
-      const updated = await usersApi.update(user.id, dto)
-      updateUser(updated)
-      toast.success('Profile updated successfully!')
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update profile')
-    } finally {
-      setIsSaving(false)
-    }
+  const [nameInput, setNameInput] = useState(currentUser.name)
+  const [bioInput, setBioInput] = useState(currentUser.bio || '')
+  const [websiteInput, setWebsiteInput] = useState(currentUser.website || '')
+
+  const savedPosts = posts.filter((p) => p.isSaved)
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault()
+    currentUser.name = nameInput
+    currentUser.bio = bioInput
+    currentUser.website = websiteInput
+    setIsEditModalOpen(false)
   }
 
-  const inputStyle = (hasError?: boolean) => ({
-    backgroundColor: '#0b1326',
-    border: `1px solid ${hasError ? '#ef4444' : 'rgba(148,163,184,0.2)'}`,
-    color: '#dae2fd',
-    outline: 'none',
-  })
-
-  const focusHandler = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = '#0ea5e9'
-    e.target.style.boxShadow = '0 0 0 1px rgba(14,165,233,0.4)'
-  }
-  const blurHandler = (hasError?: boolean) => (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = hasError ? '#ef4444' : 'rgba(148,163,184,0.2)'
-    e.target.style.boxShadow = 'none'
+  const handleConfirmLogout = () => {
+    logout()
+    setIsLogoutModalOpen(false)
+    navigate('/login')
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
-      {/* Profile Card */}
-      <div className="rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5" style={{ backgroundColor: '#131b2e', border: '1px solid rgba(148,163,184,0.1)', background: 'linear-gradient(135deg, #131b2e 0%, rgba(14,165,233,0.04) 100%)' }}>
-        {/* Avatar */}
-        <div className="relative shrink-0">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(14,165,233,0.15)', border: '2px solid rgba(14,165,233,0.3)' }}>
-            <span className="material-symbols-outlined text-[36px]" style={{ color: '#0ea5e9', fontVariationSettings: "'FILL' 1" }}>person</span>
-          </div>
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: '#10b981' }}>
-            <span className="material-symbols-outlined text-[11px] text-white">verified</span>
-          </div>
-        </div>
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="font-heading text-lg font-semibold" style={{ color: '#dae2fd' }}>{user?.name}</h2>
-            <Badge variant={user?.role === 'ADMIN' ? 'admin' : 'user'} dot>{user?.role}</Badge>
-            <Badge variant={user?.isActive ? 'success' : 'error'} dot>{user?.isActive ? 'Active' : 'Inactive'}</Badge>
-          </div>
-          <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>{user?.email}</p>
-          <div className="flex items-center gap-4 mt-2">
-            <span className="data-mono text-[11px]" style={{ color: '#64748b' }}>
-              ID: {user?.id?.slice(0, 8).toUpperCase()}...
-            </span>
-            <span className="data-mono text-[11px]" style={{ color: '#64748b' }}>
-              Joined: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Edit Form */}
-      <div className="rounded-xl p-6" style={{ backgroundColor: '#131b2e', border: '1px solid rgba(148,163,184,0.1)' }}>
-        <div className="flex items-center gap-2 mb-5 pb-4" style={{ borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
-          <span className="material-symbols-outlined text-[20px]" style={{ color: '#0ea5e9' }}>edit</span>
-          <h3 className="font-heading text-base font-semibold" style={{ color: '#dae2fd' }}>Edit Profile</h3>
-        </div>
-
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
-          {/* Name */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Full Name</label>
-            <div className="relative flex items-center">
-              <span className="material-symbols-outlined absolute left-3 text-[17px] pointer-events-none" style={{ color: '#64748b' }}>person</span>
-              <input {...register('name')} type="text" className="w-full h-10 pl-9 pr-3 rounded text-sm"
-                style={inputStyle(!!errors.name)} onFocus={focusHandler} onBlur={blurHandler(!!errors.name)} />
+    <div className="w-full flex justify-center">
+      <div className="w-full max-w-[935px] px-3 sm:px-6 py-6 flex flex-col gap-8">
+        {/* Profile Header Block */}
+        <header className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-10 w-full">
+          {/* Avatar with Story Ring */}
+          <div className="relative shrink-0 cursor-pointer group">
+            <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-full p-1 bg-gradient-to-tr from-[#833AB4] via-[#FD1D1D] to-[#FCB045] shadow-md group-hover:scale-105 transition-transform">
+              <div className="w-full h-full rounded-full p-1 bg-surface">
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
             </div>
-            {errors.name && <p className="text-xs" style={{ color: '#ef4444' }}>{errors.name.message}</p>}
           </div>
 
-          {/* Email */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Email Address</label>
-            <div className="relative flex items-center">
-              <span className="material-symbols-outlined absolute left-3 text-[17px] pointer-events-none" style={{ color: '#64748b' }}>email</span>
-              <input {...register('email')} type="email" className="w-full h-10 pl-9 pr-3 rounded text-sm"
-                style={inputStyle(!!errors.email)} onFocus={focusHandler} onBlur={blurHandler(!!errors.email)} />
-            </div>
-            {errors.email && <p className="text-xs" style={{ color: '#ef4444' }}>{errors.email.message}</p>}
-          </div>
-
-          {/* Password section */}
-          <div className="p-4 rounded-lg flex flex-col gap-4" style={{ backgroundColor: '#0b1326', border: '1px solid rgba(148,163,184,0.08)' }}>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]" style={{ color: '#94a3b8' }}>lock</span>
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Change Password</span>
-              <span className="text-[10px]" style={{ color: '#64748b' }}>(optional)</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs" style={{ color: '#94a3b8' }}>New Password</label>
-              <div className="relative flex items-center">
-                <span className="material-symbols-outlined absolute left-3 text-[17px] pointer-events-none" style={{ color: '#64748b' }}>key</span>
-                <input {...register('newPassword')} type={showNewPassword ? 'text' : 'password'} placeholder="Min 6 characters"
-                  className="w-full h-10 pl-9 pr-10 rounded text-sm" style={inputStyle(!!errors.newPassword)}
-                  onFocus={focusHandler} onBlur={blurHandler(!!errors.newPassword)} />
-                <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3" style={{ color: '#64748b' }}>
-                  <span className="material-symbols-outlined text-[17px]">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
+          {/* Profile Meta Details */}
+          <div className="flex-1 flex flex-col gap-4 text-center sm:text-left">
+            {/* Username & Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              <h1 className="font-headline-lg text-headline-md sm:text-headline-lg font-bold text-on-surface">
+                {currentUser.username}
+              </h1>
+              {currentUser.isVerified && (
+                <span className="material-symbols-outlined text-[20px] text-primary-container fill-1">
+                  verified
+                </span>
+              )}
+              <div className="flex items-center gap-2 relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-4 py-1.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-label-md font-semibold border border-outline-variant transition-colors"
+                >
+                  Edit profile
                 </button>
+                <button
+                  type="button"
+                  className="px-4 py-1.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-label-md font-semibold border border-outline-variant transition-colors"
+                >
+                  Share profile
+                </button>
+
+                {/* Direct Logout Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsLogoutModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-full bg-surface-container-high hover:bg-error/15 text-error hover:text-error text-label-md font-semibold border border-outline-variant/60 hover:border-error/40 flex items-center gap-1.5 transition-colors"
+                  title="Log out"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                  <span className="hidden sm:inline">Log out</span>
+                </button>
+
+                {/* Settings Gear Popover */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsSettingsMenuOpen(!isSettingsMenuOpen)}
+                    className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+                    aria-label="Settings"
+                  >
+                    <span className="material-symbols-outlined text-[22px]">settings</span>
+                  </button>
+
+                  {isSettingsMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-52 bg-surface-container-high border border-outline-variant rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1 backdrop-blur-xl">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false)
+                          setIsEditModalOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-body-sm text-on-surface hover:bg-surface-container text-left"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                        <span>Edit Profile</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false)
+                          setActiveTab('saved')
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-body-sm text-on-surface hover:bg-surface-container text-left"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                        <span>Saved Posts</span>
+                      </button>
+                      <div className="h-[1px] bg-outline-variant my-1" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false)
+                          setIsLogoutModalOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-body-sm text-error hover:bg-error/10 text-left font-semibold"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">logout</span>
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              {errors.newPassword && <p className="text-xs" style={{ color: '#ef4444' }}>{errors.newPassword.message}</p>}
+            </div>
+
+            {/* Metrics Row */}
+            <div className="flex items-center justify-center sm:justify-start gap-6 sm:gap-8 text-body-md text-on-surface">
+              <div>
+                <span className="font-bold">{currentUser.postsCount}</span>{' '}
+                <span className="text-on-surface-variant">posts</span>
+              </div>
+              <div>
+                <span className="font-bold">
+                  {(currentUser.followersCount / 1000).toFixed(1)}k
+                </span>{' '}
+                <span className="text-on-surface-variant">followers</span>
+              </div>
+              <div>
+                <span className="font-bold">{currentUser.followingCount}</span>{' '}
+                <span className="text-on-surface-variant">following</span>
+              </div>
+            </div>
+
+            {/* Bio Details */}
+            <div className="flex flex-col gap-1 text-body-sm leading-relaxed max-w-[500px]">
+              <span className="font-bold text-on-surface">{currentUser.name}</span>
+              {currentUser.category && (
+                <span className="text-outline text-[12px] font-medium">
+                  {currentUser.category}
+                </span>
+              )}
+              <p className="text-on-surface-variant whitespace-pre-line">
+                {currentUser.bio}
+              </p>
+              {currentUser.website && (
+                <a
+                  href={currentUser.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary-container font-semibold hover:underline w-fit mt-1 text-[13px]"
+                >
+                  <span className="material-symbols-outlined text-[16px]">link</span>
+                  <span>{currentUser.website.replace('https://', '')}</span>
+                </a>
+              )}
             </div>
           </div>
+        </header>
 
-          <div className="flex justify-end gap-3">
-            <Button type="submit" variant="primary" loading={isSaving} icon="save">Save Changes</Button>
-          </div>
-        </form>
-      </div>
-
-      {/* Account Info */}
-      <div className="rounded-xl p-5" style={{ backgroundColor: '#131b2e', border: '1px solid rgba(148,163,184,0.1)' }}>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="material-symbols-outlined text-[18px]" style={{ color: '#0ea5e9' }}>info</span>
-          <h3 className="font-heading text-sm font-semibold" style={{ color: '#dae2fd' }}>Account Information</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: 'User ID', value: user?.id?.slice(0, 16) + '...', icon: 'fingerprint' },
-            { label: 'Account Role', value: user?.role, icon: 'badge' },
-            { label: 'Account Status', value: user?.isActive ? 'Active' : 'Inactive', icon: 'toggle_on' },
-            { label: 'Last Updated', value: user?.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'N/A', icon: 'update' },
-          ].map(({ label, value, icon }) => (
-            <div key={label} className="flex flex-col gap-1 p-3 rounded-lg" style={{ backgroundColor: '#222a3d' }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="material-symbols-outlined text-[14px]" style={{ color: '#94a3b8' }}>{icon}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>{label}</span>
+        {/* Story Highlights Tray */}
+        <section className="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-2">
+          {HIGHLIGHTS.map((hl) => (
+            <div
+              key={hl.name}
+              className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+            >
+              <div className="w-16 h-16 rounded-full p-0.5 border border-outline-variant group-hover:border-primary-container transition-colors">
+                <img
+                  src={hl.cover}
+                  alt={hl.name}
+                  className="w-full h-full rounded-full object-cover"
+                />
               </div>
-              <span className="data-mono text-xs font-medium" style={{ color: '#dae2fd' }}>{value}</span>
+              <span className="text-[11px] font-medium text-on-surface-variant group-hover:text-on-surface max-w-[70px] truncate text-center">
+                {hl.name}
+              </span>
             </div>
           ))}
+
+          {/* New highlight button */}
+          <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group">
+            <div className="w-16 h-16 rounded-full border border-dashed border-outline-variant flex items-center justify-center text-outline group-hover:text-on-surface group-hover:border-on-surface transition-all">
+              <span className="material-symbols-outlined text-2xl">add</span>
+            </div>
+            <span className="text-[11px] font-medium text-outline">New</span>
+          </div>
+        </section>
+
+        {/* Navigation Tabs */}
+        <div className="flex items-center justify-center gap-8 sm:gap-12 border-t border-outline-variant text-[12px] font-bold tracking-wider uppercase">
+          <button
+            type="button"
+            onClick={() => setActiveTab('posts')}
+            className={`flex items-center gap-2 py-3 border-t-2 -mt-[1px] transition-colors ${
+              activeTab === 'posts'
+                ? 'border-on-surface text-on-surface'
+                : 'border-transparent text-outline hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">grid_on</span>
+            <span className="hidden sm:inline">Posts</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('reels')}
+            className={`flex items-center gap-2 py-3 border-t-2 -mt-[1px] transition-colors ${
+              activeTab === 'reels'
+                ? 'border-on-surface text-on-surface'
+                : 'border-transparent text-outline hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">smart_display</span>
+            <span className="hidden sm:inline">Reels</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('saved')}
+            className={`flex items-center gap-2 py-3 border-t-2 -mt-[1px] transition-colors ${
+              activeTab === 'saved'
+                ? 'border-on-surface text-on-surface'
+                : 'border-transparent text-outline hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">bookmark</span>
+            <span className="hidden sm:inline">Saved</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('tagged')}
+            className={`flex items-center gap-2 py-3 border-t-2 -mt-[1px] transition-colors ${
+              activeTab === 'tagged'
+                ? 'border-on-surface text-on-surface'
+                : 'border-transparent text-outline hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">assignment_ind</span>
+            <span className="hidden sm:inline">Tagged</span>
+          </button>
+        </div>
+
+        {/* Content Grid */}
+        <div>
+          {activeTab === 'posts' && (
+            <div className="grid grid-cols-3 gap-1 sm:gap-3">
+              {posts.map((post) => (
+                <div
+                  key={post.id}
+                  className="relative group aspect-square bg-surface-container-low rounded-lg overflow-hidden cursor-pointer"
+                >
+                  <img
+                    src={post.mediaUrl}
+                    alt={post.caption}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-body-sm select-none">
+                    <div className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[18px] fill-1 text-[#FD1D1D]">
+                        favorite
+                      </span>
+                      <span>{post.likesCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[18px] fill-1">
+                        chat_bubble
+                      </span>
+                      <span>{post.commentsCount}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'reels' && (
+            <div className="grid grid-cols-3 gap-1 sm:gap-3">
+              {reels.map((reel) => (
+                <div
+                  key={reel.id}
+                  className="relative group aspect-[9/16] bg-surface-container-low rounded-lg overflow-hidden cursor-pointer"
+                >
+                  <img
+                    src={reel.posterUrl}
+                    alt={reel.caption}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute top-2 right-2 text-white">
+                    <span className="material-symbols-outlined text-[18px]">
+                      smart_display
+                    </span>
+                  </div>
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white font-bold text-body-sm">
+                    <div className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[18px] fill-1 text-[#FD1D1D]">
+                        favorite
+                      </span>
+                      <span>{(reel.likesCount / 1000).toFixed(0)}k</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'saved' && (
+            <div className="grid grid-cols-3 gap-1 sm:gap-3">
+              {savedPosts.length === 0 ? (
+                <div className="col-span-3 flex flex-col items-center justify-center py-20 text-outline text-body-sm gap-2">
+                  <span className="material-symbols-outlined text-4xl">bookmark_border</span>
+                  <span>No saved posts yet</span>
+                </div>
+              ) : (
+                savedPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="relative group aspect-square bg-surface-container-low rounded-lg overflow-hidden cursor-pointer"
+                  >
+                    <img
+                      src={post.mediaUrl}
+                      alt={post.caption}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-body-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[18px] fill-1 text-[#FD1D1D]">
+                          favorite
+                        </span>
+                        <span>{post.likesCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'tagged' && (
+            <div className="col-span-3 flex flex-col items-center justify-center py-20 text-outline text-body-sm gap-2">
+              <span className="material-symbols-outlined text-4xl">assignment_ind</span>
+              <span>No tagged posts yet</span>
+            </div>
+          )}
         </div>
       </div>
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      {/* Edit Profile Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-[480px] bg-surface-container rounded-2xl border border-outline-variant shadow-2xl overflow-hidden p-6 flex flex-col gap-5">
+            <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3">
+              <h3 className="font-headline-sm text-body-lg font-bold text-on-surface">
+                Edit profile
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 rounded-full text-on-surface-variant hover:text-on-surface"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-semibold text-outline">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className="bg-surface-container-low rounded-xl px-3.5 py-2 text-body-sm text-on-surface border border-outline-variant focus:outline-none focus:border-primary-container"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-semibold text-outline">
+                  Bio
+                </label>
+                <textarea
+                  rows={3}
+                  value={bioInput}
+                  onChange={(e) => setBioInput(e.target.value)}
+                  className="bg-surface-container-low rounded-xl px-3.5 py-2 text-body-sm text-on-surface border border-outline-variant focus:outline-none focus:border-primary-container resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-label-sm font-semibold text-outline">
+                  Website
+                </label>
+                <input
+                  type="text"
+                  value={websiteInput}
+                  onChange={(e) => setWebsiteInput(e.target.value)}
+                  className="bg-surface-container-low rounded-xl px-3.5 py-2 text-body-sm text-on-surface border border-outline-variant focus:outline-none focus:border-primary-container"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-1.5 text-label-md font-semibold text-on-surface-variant hover:text-on-surface"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-1.5 bg-primary-container hover:bg-primary-container/90 text-white rounded-full text-label-md font-semibold shadow"
+                >
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-[380px] bg-surface-container rounded-2xl border border-outline-variant shadow-2xl overflow-hidden p-6 flex flex-col items-center text-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-error/15 border border-error/30 text-error flex items-center justify-center">
+              <span className="material-symbols-outlined text-[26px]">logout</span>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">
+                Log out of @{currentUser.username}?
+              </h3>
+              <p className="text-body-sm text-on-surface-variant">
+                You will need to sign in again to access your feed, messages, and profile.
+              </p>
+            </div>
+
+            <div className="flex flex-col w-full gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                className="w-full py-2.5 rounded-full bg-error hover:bg-error/90 text-white font-label-md font-bold tracking-wide transition-all shadow-md"
+              >
+                Log Out
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="w-full py-2 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-label-md font-semibold border border-outline-variant transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
